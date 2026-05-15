@@ -7,29 +7,34 @@ import typer
 
 from subgenx.subtitles import (
     DEFAULT_MODEL,
+    SUPPORTED_SOURCE_LANGUAGE_CODES,
     require_ffmpeg,
     transcribe_to_srt,
 )
-from subgenx.translation import SUPPORTED_TARGET_LANGUAGE_CODES, translate_subtitles
+from subgenx.translation import (
+    SUPPORTED_TARGET_LANGUAGE_CODES,
+    get_available_nllb_languages,
+    translate_subtitles,
+)
 
 app = typer.Typer(
     add_completion=False,
     help=(
         "Transcribe an audio or video file to SRT with WhisperX. "
         "Without --to, the tool only transcribes. Passing --to also translates the "
-        "subtitles; add --save-intermediary-srt to keep the original transcribed SRT."
+        "subtitles; add --save-intermediary-srt to keep the original transcribed SRT. "
+        "Use the language listing flags to inspect supported source, mapped target, "
+        "and raw NLLB codes."
     ),
 )
-
-TARGET_LANGUAGE_CODES_HELP = ", ".join(SUPPORTED_TARGET_LANGUAGE_CODES)
 
 
 @app.command()
 def run(
     input_file: Annotated[
-        Path,
+        Path | None,
         typer.Argument(help="Path to the input audio or video file."),
-    ],
+    ] = None,
     model: Annotated[
         str,
         typer.Option(help=f"Whisper model name to use. Default: {DEFAULT_MODEL}."),
@@ -67,9 +72,10 @@ def run(
             "--target-language",
             "-t",
             help=(
-                "Translate to this language. Use one of the mapped Whisper language "
-                f"codes ({TARGET_LANGUAGE_CODES_HELP}) or a raw NLLB code like "
-                "'spa_Latn'. If omitted, the tool only transcribes."
+                "Translate to this language. Use one of the mapped Whisper target "
+                "codes or a raw NLLB code like 'spa_Latn'. If omitted, the tool only "
+                "transcribes. Use --list-target-languages or --list-nllb-languages "
+                "to inspect supported values."
             ),
         ),
     ] = None,
@@ -84,7 +90,60 @@ def run(
             is_flag=True,
         ),
     ] = False,
+    list_languages: Annotated[
+        bool,
+        typer.Option(
+            "--list-languages",
+            help="List source Whisper codes, mapped target codes, and raw NLLB codes.",
+            is_flag=True,
+        ),
+    ] = False,
+    list_source_languages: Annotated[
+        bool,
+        typer.Option(
+            "--list-source-languages",
+            help="List supported Whisper source language codes.",
+            is_flag=True,
+        ),
+    ] = False,
+    list_target_languages: Annotated[
+        bool,
+        typer.Option(
+            "--list-target-languages",
+            help="List supported mapped target language codes for --to.",
+            is_flag=True,
+        ),
+    ] = False,
+    list_nllb_languages: Annotated[
+        bool,
+        typer.Option(
+            "--list-nllb-languages",
+            help="List raw NLLB target language codes accepted by --to.",
+            is_flag=True,
+        ),
+    ] = False,
 ) -> None:
+    if list_languages or list_source_languages or list_target_languages or list_nllb_languages:
+        if input_file is not None:
+            raise typer.BadParameter(
+                "INPUT_FILE cannot be used with language listing options."
+            )
+        if list_languages or list_source_languages:
+            typer.echo("Source languages (Whisper codes):")
+            typer.echo(", ".join(SUPPORTED_SOURCE_LANGUAGE_CODES))
+            typer.echo()
+        if list_languages or list_target_languages:
+            typer.echo("Mapped target languages (--to Whisper-style codes):")
+            typer.echo(", ".join(SUPPORTED_TARGET_LANGUAGE_CODES))
+            typer.echo()
+        if list_languages or list_nllb_languages:
+            typer.echo("Raw NLLB target languages (--to NLLB codes):")
+            typer.echo(", ".join(get_available_nllb_languages()))
+        return
+
+    if input_file is None:
+        raise typer.BadParameter("Missing argument 'INPUT_FILE'.")
+
     require_ffmpeg()
     write_original_srt = target_language is None or save_intermediary_srt
     document = transcribe_to_srt(

@@ -35,6 +35,7 @@ LANGUAGE_SPECS = {
 SUPPORTED_TARGET_LANGUAGE_CODES = tuple(sorted(LANGUAGE_SPECS))
 
 _TRANSLATION_MODELS: dict[str, tuple[object, object, str]] = {}
+_NLLB_LANGUAGE_CODES: tuple[str, ...] | None = None
 
 
 def resolve_language(language: str) -> LanguageSpec:
@@ -74,6 +75,16 @@ def get_translation_backend(
         device = get_device()
         _TRANSLATION_MODELS[model_name] = (tokenizer, model.to(device), device)
     return _TRANSLATION_MODELS[model_name]
+
+
+def get_available_nllb_languages(
+    model_name: str = DEFAULT_TRANSLATION_MODEL,
+) -> tuple[str, ...]:
+    global _NLLB_LANGUAGE_CODES
+    if _NLLB_LANGUAGE_CODES is None:
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        _NLLB_LANGUAGE_CODES = tuple(sorted(tokenizer.additional_special_tokens))
+    return _NLLB_LANGUAGE_CODES
 
 
 def translate_batch(
