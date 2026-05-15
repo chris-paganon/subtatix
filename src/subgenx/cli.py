@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 from pathlib import Path
 
 import torch
@@ -14,9 +15,13 @@ DEFAULT_MODEL = "large-v2"
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="subgenx",
-        description="Transcribe an audio file to SRT with WhisperX.",
+        description="Transcribe an audio or video file to SRT with WhisperX.",
     )
-    parser.add_argument("audio_file", type=Path, help="Path to the input audio file.")
+    parser.add_argument(
+        "input_file",
+        type=Path,
+        help="Path to the input audio or video file.",
+    )
     parser.add_argument(
         "--model",
         default=DEFAULT_MODEL,
@@ -37,15 +42,22 @@ def detect_runtime() -> tuple[str, str]:
     return "cpu", "float32"
 
 
-def transcribe_to_srt(audio_file: Path, model_name: str, batch_size: int) -> Path:
-    audio_file = audio_file.expanduser().resolve()
-    if not audio_file.is_file():
-        raise FileNotFoundError(f"Audio file not found: {audio_file}")
+def require_ffmpeg() -> None:
+    if shutil.which("ffmpeg") is None:
+        raise RuntimeError(
+            "ffmpeg is required but was not found on PATH. Install ffmpeg and try again."
+        )
+
+
+def transcribe_to_srt(input_file: Path, model_name: str, batch_size: int) -> Path:
+    input_file = input_file.expanduser().resolve()
+    if not input_file.is_file():
+        raise FileNotFoundError(f"Input file not found: {input_file}")
 
     device, compute_type = detect_runtime()
     whisper_model = whisperx.load_model(model_name, device, compute_type=compute_type)
 
-    audio = whisperx.load_audio(str(audio_file))
+    audio = whisperx.load_audio(str(input_file))
     transcription = whisper_model.transcribe(audio, batch_size=batch_size)
     language = transcription["language"]
 
@@ -63,23 +75,24 @@ def transcribe_to_srt(audio_file: Path, model_name: str, batch_size: int) -> Pat
     )
     aligned_transcription["language"] = language
 
-    writer = get_writer("srt", str(audio_file.parent))
+    writer = get_writer("srt", str(input_file.parent))
     writer(
         aligned_transcription,
-        str(audio_file),
+        str(input_file),
         {
             "highlight_words": False,
             "max_line_count": None,
             "max_line_width": None,
         },
     )
-    return audio_file.with_suffix(".srt")
+    return input_file.with_suffix(".srt")
 
 
 def main() -> None:
+    require_ffmpeg()
     args = build_parser().parse_args()
     output_path = transcribe_to_srt(
-        audio_file=args.audio_file,
+        input_file=args.input_file,
         model_name=args.model,
         batch_size=args.batch_size,
     )
