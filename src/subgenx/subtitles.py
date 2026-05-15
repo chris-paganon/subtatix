@@ -4,12 +4,14 @@ from dataclasses import dataclass
 import shutil
 from pathlib import Path
 
+from faster_whisper.tokenizer import _LANGUAGE_CODES
 import whisperx
 
 from subgenx.runtime import get_whisperx_runtime, release_memory
 
 
 DEFAULT_MODEL = "large-v2"
+SUPPORTED_SOURCE_LANGUAGE_CODES = tuple(sorted(_LANGUAGE_CODES))
 
 
 @dataclass(frozen=True)
@@ -31,6 +33,17 @@ def require_ffmpeg() -> None:
         raise RuntimeError(
             "ffmpeg is required but was not found on PATH. Install ffmpeg and try again."
         )
+
+
+def normalize_source_language(language: str) -> str:
+    language_code = language.strip().lower()
+    if language_code in SUPPORTED_SOURCE_LANGUAGE_CODES:
+        return language_code
+
+    raise ValueError(
+        f"Unsupported source language '{language}'. Use a Whisper language code like "
+        "'en', 'es', or 'fr'."
+    )
 
 
 def resolve_output_path(input_file: Path, output_file: Path | None) -> Path:
@@ -95,11 +108,17 @@ def transcribe_to_srt(
     batch_size: int = 16,
     output_file: Path | None = None,
     write_output: bool = True,
+    source_language: str | None = None,
 ) -> SubtitleDocument:
     input_file = input_file.expanduser().resolve()
     if not input_file.is_file():
         raise FileNotFoundError(f"Input file not found: {input_file}")
     output_path = resolve_output_path(input_file, output_file)
+    normalized_source_language = (
+        normalize_source_language(source_language)
+        if source_language is not None
+        else None
+    )
 
     device, compute_type = get_whisperx_runtime()
     whisper_model = None
@@ -116,7 +135,11 @@ def transcribe_to_srt(
         )
 
         audio = whisperx.load_audio(str(input_file))
-        transcription = whisper_model.transcribe(audio, batch_size=batch_size)
+        transcription = whisper_model.transcribe(
+            audio,
+            batch_size=batch_size,
+            language=normalized_source_language,
+        )
         language = transcription["language"]
 
         align_model, align_metadata = whisperx.load_align_model(

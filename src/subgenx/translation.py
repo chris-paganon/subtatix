@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import re
 from pathlib import Path
 
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
@@ -21,45 +20,36 @@ class LanguageSpec:
 
 LANGUAGE_SPECS = {
     "ca": LanguageSpec("cat_Latn", "ca"),
-    "catalan": LanguageSpec("cat_Latn", "ca"),
     "de": LanguageSpec("deu_Latn", "de"),
-    "german": LanguageSpec("deu_Latn", "de"),
     "en": LanguageSpec("eng_Latn", "en"),
-    "english": LanguageSpec("eng_Latn", "en"),
     "es": LanguageSpec("spa_Latn", "es"),
-    "spanish": LanguageSpec("spa_Latn", "es"),
     "fr": LanguageSpec("fra_Latn", "fr"),
-    "french": LanguageSpec("fra_Latn", "fr"),
     "it": LanguageSpec("ita_Latn", "it"),
-    "italian": LanguageSpec("ita_Latn", "it"),
     "ja": LanguageSpec("jpn_Jpan", "ja"),
-    "japanese": LanguageSpec("jpn_Jpan", "ja"),
     "ko": LanguageSpec("kor_Hang", "ko"),
-    "korean": LanguageSpec("kor_Hang", "ko"),
     "nl": LanguageSpec("nld_Latn", "nl"),
-    "dutch": LanguageSpec("nld_Latn", "nl"),
     "pt": LanguageSpec("por_Latn", "pt"),
-    "portuguese": LanguageSpec("por_Latn", "pt"),
     "ru": LanguageSpec("rus_Cyrl", "ru"),
-    "russian": LanguageSpec("rus_Cyrl", "ru"),
     "zh": LanguageSpec("zho_Hans", "zh"),
-    "chinese": LanguageSpec("zho_Hans", "zh"),
 }
+SUPPORTED_TARGET_LANGUAGE_CODES = tuple(sorted(LANGUAGE_SPECS))
 
 _TRANSLATION_MODELS: dict[str, tuple[object, object, str]] = {}
 
 
 def resolve_language(language: str) -> LanguageSpec:
-    key = language.strip().lower()
+    raw_language = language.strip()
+    key = raw_language.lower()
     if key in LANGUAGE_SPECS:
         return LANGUAGE_SPECS[key]
 
-    if re.fullmatch(r"[a-z]{3}_[A-Za-z][a-z]{3}", language):
-        return LanguageSpec(language, key.split("_", 1)[0])
+    parts = raw_language.split("_", 1)
+    if len(parts) == 2 and len(parts[0]) == 3 and parts[0].islower():
+        return LanguageSpec(raw_language, parts[0])
 
     raise ValueError(
-        f"Unsupported language '{language}'. Use a supported alias like 'es' or "
-        "'spanish', or pass a full NLLB language code like 'spa_Latn'."
+        f"Unsupported language '{language}'. Use a Whisper language code like 'es' "
+        "or a full NLLB language code like 'spa_Latn'."
     )
 
 
