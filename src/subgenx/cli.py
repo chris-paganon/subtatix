@@ -43,27 +43,29 @@ def transcribe_to_srt(audio_file: Path, model_name: str, batch_size: int) -> Pat
         raise FileNotFoundError(f"Audio file not found: {audio_file}")
 
     device, compute_type = detect_runtime()
-    model = whisperx.load_model(model_name, device, compute_type=compute_type)
+    whisper_model = whisperx.load_model(model_name, device, compute_type=compute_type)
 
     audio = whisperx.load_audio(str(audio_file))
-    result = model.transcribe(audio, batch_size=batch_size)
+    transcription = whisper_model.transcribe(audio, batch_size=batch_size)
+    language = transcription["language"]
 
-    model_a, metadata = whisperx.load_align_model(
-        language_code=result["language"],
+    align_model, align_metadata = whisperx.load_align_model(
+        language_code=language,
         device=device,
     )
-    result = whisperx.align(
-        result["segments"],
-        model_a,
-        metadata,
+    aligned_transcription = whisperx.align(
+        transcription["segments"],
+        align_model,
+        align_metadata,
         audio,
         device,
         return_char_alignments=False,
     )
+    aligned_transcription["language"] = language
 
     writer = get_writer("srt", str(audio_file.parent))
     writer(
-        result,
+        aligned_transcription,
         str(audio_file),
         {
             "highlight_words": False,
