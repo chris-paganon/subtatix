@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import shutil
 from pathlib import Path
+from typing import Callable
 
 from faster_whisper.tokenizer import _LANGUAGE_CODES
 import whisperx
@@ -124,20 +125,29 @@ def transcribe_with_backoff(
     batch_size: int,
     source_language: str | None,
     device: str,
-) -> dict:
+    log: Callable[[str], None] | None = None,
+) -> tuple[dict, int]:
     attempts = iter_retry_batch_sizes(batch_size)
     last_error: RuntimeError | None = None
     for attempt_batch_size in attempts:
         try:
-            return whisper_model.transcribe(
+            transcription = whisper_model.transcribe(
                 audio,
                 batch_size=attempt_batch_size,
                 language=source_language,
             )
+            return transcription, attempt_batch_size
         except RuntimeError as error:
             if device != "cuda" or not is_cuda_oom(error):
                 raise
             last_error = error
+            next_attempt_index = attempts.index(attempt_batch_size) + 1
+            if log is not None and next_attempt_index < len(attempts):
+                log(
+                    "CUDA out of memory at batch size "
+                    f"{attempt_batch_size}; retrying with batch size "
+                    f"{attempts[next_attempt_index]}."
+                )
             release_memory()
     assert last_error is not None
     raise RuntimeError(
@@ -155,6 +165,7 @@ def transcribe_to_srt(
     write_output: bool = True,
     source_language: str | None = None,
     device_preference: str = "auto",
+    log: Callable[[str], None] | None = None,
 ) -> SubtitleDocument:
     input_file = input_file.expanduser().resolve()
     if not input_file.is_file():
@@ -167,6 +178,11 @@ def transcribe_to_srt(
     )
 
     device, compute_type = get_whisperx_runtime(device_preference)
+    if log is not None:
+        log(
+            f"Using device: {device} (compute_type={compute_type}, "
+            f"requested={device_preference}, initial_batch_size={batch_size})."
+        )
     whisper_model = None
     align_model = None
     audio = None
@@ -181,13 +197,16 @@ def transcribe_to_srt(
         )
 
         audio = whisperx.load_audio(str(input_file))
-        transcription = transcribe_with_backoff(
+        transcription, effective_batch_size = transcribe_with_backoff(
             whisper_model=whisper_model,
             audio=audio,
             batch_size=batch_size,
             source_language=normalized_source_language,
             device=device,
+            log=log,
         )
+        if log is not None:
+            log(f"Transcription running with batch size {effective_batch_size}.")
         language = transcription["language"]
 
         align_model, align_metadata = whisperx.load_align_model(

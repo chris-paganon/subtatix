@@ -167,6 +167,7 @@ def run(
         write_output=write_original_srt,
         source_language=source_language,
         device_preference=device,
+        log=lambda message: typer.echo(message, err=True),
     )
     if write_original_srt:
         typer.echo(document.subtitle_path)
