@@ -7,9 +7,9 @@ from typing import Callable
 
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
-from subgenx.errors import SubgenxError
-from subgenx.runtime import get_device, release_memory
-from subgenx.subtitles import SubtitleCue, SubtitleDocument, write_srt
+from subtatix.errors import SubtatixError
+from subtatix.runtime import get_device, release_memory
+from subtatix.subtitles import SubtitleCue, SubtitleDocument, write_srt
 
 
 DEFAULT_TRANSLATION_MODEL = "facebook/nllb-200-1.3B"
@@ -52,7 +52,7 @@ def resolve_language(language: str) -> LanguageSpec:
     if len(parts) == 2 and len(parts[0]) == 3 and parts[0].islower():
         return LanguageSpec(raw_language, parts[0])
 
-    raise SubgenxError(
+    raise SubtatixError(
         f"Unsupported language '{language}'. Use a Whisper language code like 'es' "
         "or a full NLLB language code like 'spa_Latn'."
     )
@@ -63,7 +63,7 @@ def resolve_translation_output_path(
     target_language: LanguageSpec,
 ) -> Path:
     if subtitle_path.suffix != ".srt":
-        raise SubgenxError(f"Expected an .srt subtitle file, got: {subtitle_path}")
+        raise SubtatixError(f"Expected an .srt subtitle file, got: {subtitle_path}")
     return subtitle_path.with_name(
         f"{subtitle_path.stem}.{target_language.suffix}{subtitle_path.suffix}"
     )

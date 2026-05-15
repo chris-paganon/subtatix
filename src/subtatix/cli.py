@@ -7,16 +7,16 @@ from typing import Annotated
 import typer
 from click.exceptions import ClickException
 
-from subgenx.errors import SubgenxError
+from subtatix.errors import SubtatixError
 
-from subgenx.subtitles import (
+from subtatix.subtitles import (
     DEFAULT_MODEL,
     SUPPORTED_SOURCE_LANGUAGE_CODES,
     require_ffmpeg,
     transcribe_to_srt,
 )
-from subgenx.runtime import configure_runtime_noise
-from subgenx.translation import (
+from subtatix.runtime import configure_runtime_noise
+from subtatix.translation import (
     DEFAULT_TRANSLATION_BATCH_SIZE,
     SUPPORTED_TARGET_LANGUAGE_CODES,
     get_available_nllb_languages,
@@ -127,7 +127,7 @@ def run(
             "--output",
             "-o",
             help=(
-                "Base output path without a .srt suffix. subgenx writes "
+                "Base output path without a .srt suffix. Subtatix writes "
                 "'.srt' and translated variants like '.es.srt'. If a directory is "
                 "provided, the default filename based on the input file is used inside it."
             ),
@@ -264,7 +264,7 @@ def run(
 def main() -> int:
     try:
         app(standalone_mode=False)
-    except SubgenxError as error:
+    except SubtatixError as error:
         ClickException(str(error)).show()
         return 1
     except ClickException as error:

@@ -6,20 +6,20 @@ import warnings
 
 import torch
 
-from subgenx.errors import SubgenxError
+from subtatix.errors import SubtatixError
 
 
 def get_device(preferred: str = "auto") -> str:
     normalized = preferred.strip().lower()
     if normalized not in {"auto", "cpu", "cuda"}:
-        raise SubgenxError(
+        raise SubtatixError(
             f"Unsupported device '{preferred}'. Use 'auto', 'cpu', or 'cuda'."
         )
     if normalized == "cpu":
         return "cpu"
     if normalized == "cuda":
         if not torch.cuda.is_available():
-            raise SubgenxError(
+            raise SubtatixError(
                 "CUDA was requested but is not available on this system."
             )
         return "cuda"

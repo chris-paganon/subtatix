@@ -1,5 +1,5 @@
 [project]
-name = "subgenx"
+name = "subtatix"
 version = "0.1.0"
 description = "CLI for generating and translating SRT subtitles with WhisperX"
 readme = "README.md"
@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-subgenx = "subgenx.__main__:main"
+subtatix = "subtatix.__main__:main"
 
 [build-system]
 requires = ["uv_build>=0.11.13,<0.12.0"]

@@ -1,4 +1,4 @@
-from subgenx.cli import main
+from subtatix.cli import main
 
 
 if __name__ == "__main__":

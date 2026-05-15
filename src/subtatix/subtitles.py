@@ -8,8 +8,8 @@ from typing import Callable
 from faster_whisper.tokenizer import _LANGUAGE_CODES
 import whisperx
 
-from subgenx.errors import SubgenxError
-from subgenx.runtime import get_whisperx_runtime, release_memory
+from subtatix.errors import SubtatixError
+from subtatix.runtime import get_whisperx_runtime, release_memory
 
 
 DEFAULT_MODEL = "large-v2"
@@ -32,7 +32,7 @@ class SubtitleDocument:
 
 def require_ffmpeg() -> None:
     if shutil.which("ffmpeg") is None:
-        raise SubgenxError(
+        raise SubtatixError(
             "ffmpeg is required but was not found on PATH. Install ffmpeg and try again."
         )
 
@@ -42,7 +42,7 @@ def normalize_source_language(language: str) -> str:
     if language_code in SUPPORTED_SOURCE_LANGUAGE_CODES:
         return language_code
 
-    raise SubgenxError(
+    raise SubtatixError(
         f"Unsupported source language '{language}'. Use a Whisper language code like "
         "'en', 'es', or 'fr'."
     )
@@ -57,9 +57,9 @@ def resolve_output_path(input_file: Path, output_file: Path | None) -> Path:
     if output_file.exists() and output_file.is_dir():
         return (output_file / default_output_path.name).resolve()
     if output_file.suffix == ".srt":
-        raise SubgenxError(
+        raise SubtatixError(
             "Output paths must not end in '.srt'. Pass a base output path like "
-            "'some-path/some-file-name' so subgenx can write '.srt' and translated variants like "
+            "'some-path/some-file-name' so Subtatix can write '.srt' and translated variants like "
             "'.es.srt'."
         )
     return output_file.with_suffix(".srt").resolve()
@@ -162,7 +162,7 @@ def transcribe_with_backoff(
                 progress_reset()
             release_memory()
     assert last_error is not None
-    raise SubgenxError(
+    raise SubtatixError(
         "CUDA ran out of memory during transcription even after retrying with "
         f"smaller batch sizes {attempts}. Retry with --device cpu, a smaller "
         "--model, or a lower --batch-size."
@@ -183,7 +183,7 @@ def transcribe_to_srt(
 ) -> SubtitleDocument:
     input_file = input_file.expanduser().resolve()
     if not input_file.is_file():
-        raise SubgenxError(f"Input file not found: {input_file}")
+        raise SubtatixError(f"Input file not found: {input_file}")
     output_path = resolve_output_path(input_file, output_file)
     normalized_source_language = (
         normalize_source_language(source_language)

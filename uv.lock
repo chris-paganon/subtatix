@@ -2446,7 +2446,7 @@ wheels = [
 ]
 
 [[package]]
-name = "subgenx"
+name = "subtatix"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

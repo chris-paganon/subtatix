@@ -1,6 +1,6 @@
-# subgenx
+# Subtatix
 
-`subgenx` is a small CLI for generating `.srt` subtitles from audio or video files with [WhisperX](https://github.com/m-bain/whisperX), with optional subtitle translation.
+`Subtatix` is a small CLI for generating `.srt` subtitles from audio or video files with [WhisperX](https://github.com/m-bain/whisperX), with optional subtitle translation.
 
 It transcribes the input, aligns subtitle timings with WhisperX, and can then translate the resulting subtitle lines into another language.
 
@@ -24,13 +24,13 @@ uv sync
 Run the CLI:
 
 ```bash
-uv run subgenx input.mp4
+uv run subtatix input.mp4
 ```
 
 Transcribe to a specific output path:
 
 ```bash
-uv run subgenx input.mp4 --output some-path/some-file-name
+uv run subtatix input.mp4 --output some-path/some-file-name
 ```
 
 `--output` is a base path, not a full `.srt` filename. This writes `some-path/some-file-name.srt`. If you also translate to Spanish, it writes `some-path/some-file-name.es.srt`.
@@ -38,13 +38,13 @@ uv run subgenx input.mp4 --output some-path/some-file-name
 Set the source language explicitly:
 
 ```bash
-uv run subgenx input.mp4 --source-language en
+uv run subtatix input.mp4 --source-language en
 ```
 
 Translate after transcription:
 
 ```bash
-uv run subgenx input.mp4 --to es
+uv run subtatix input.mp4 --to es
 ```
 
 This writes both the original transcription SRT and the translated SRT by default.
@@ -52,14 +52,14 @@ This writes both the original transcription SRT and the translated SRT by defaul
 If CUDA runs out of memory on larger files, reduce the batch size or force CPU mode:
 
 ```bash
-uv run subgenx input.mp4 --batch-size 4
-uv run subgenx input.mp4 --device cpu
+uv run subtatix input.mp4 --batch-size 4
+uv run subtatix input.mp4 --device cpu
 ```
 
 To discard the original transcription and only keep the translated output:
 
 ```bash
-uv run subgenx input.mp4 --to es --discard-transcription
+uv run subtatix input.mp4 --to es --discard-transcription
 ```
 
 Passing an `--output` value that ends in `.srt` is rejected. Use a base path such as `--output subtitles` instead.
@@ -67,8 +67,8 @@ Passing an `--output` value that ends in `.srt` is rejected. Use a base path suc
 List supported language codes:
 
 ```bash
-uv run subgenx --list-languages
-uv run subgenx --list-target-languages
+uv run subtatix --list-languages
+uv run subtatix --list-target-languages
 ```
 
 ## Models
