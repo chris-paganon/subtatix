@@ -5,14 +5,25 @@ import gc
 import torch
 
 
-def get_device() -> str:
+def get_device(preferred: str = "auto") -> str:
+    normalized = preferred.strip().lower()
+    if normalized not in {"auto", "cpu", "cuda"}:
+        raise ValueError(
+            f"Unsupported device '{preferred}'. Use 'auto', 'cpu', or 'cuda'."
+        )
+    if normalized == "cpu":
+        return "cpu"
+    if normalized == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA was requested but is not available on this system.")
+        return "cuda"
     if torch.cuda.is_available():
         return "cuda"
     return "cpu"
 
 
-def get_whisperx_runtime() -> tuple[str, str]:
-    device = get_device()
+def get_whisperx_runtime(preferred_device: str = "auto") -> tuple[str, str]:
+    device = get_device(preferred_device)
     if device == "cuda":
         return device, "float16"
     return device, "float32"

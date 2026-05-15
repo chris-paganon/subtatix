@@ -46,6 +46,16 @@ def run(
             help="Batch size for Whisper inference. Reduce this if you run out of GPU memory.",
         ),
     ] = 16,
+    device: Annotated[
+        str,
+        typer.Option(
+            "--device",
+            help=(
+                "Execution device for WhisperX: 'auto', 'cuda', or 'cpu'. "
+                "Default: auto."
+            ),
+        ),
+    ] = "auto",
     source_language: Annotated[
         str | None,
         typer.Option(
@@ -156,6 +166,7 @@ def run(
         output_file=output,
         write_output=write_original_srt,
         source_language=source_language,
+        device_preference=device,
     )
     if write_original_srt:
         typer.echo(document.subtitle_path)

@@ -45,6 +45,13 @@ Translate after transcription:
 uv run subgenx input.mp4 --to es
 ```
 
+If CUDA runs out of memory on larger files, reduce the batch size or force CPU mode:
+
+```bash
+uv run subgenx input.mp4 --batch-size 4
+uv run subgenx input.mp4 --device cpu
+```
+
 Keep both the original and translated subtitle files:
 
 ```bash

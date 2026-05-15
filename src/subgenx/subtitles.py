@@ -102,6 +102,51 @@ def write_srt(subtitle_path: Path, cues: list[SubtitleCue]) -> None:
     subtitle_path.write_text("\n\n".join(blocks) + "\n", encoding="utf-8")
 
 
+def is_cuda_oom(error: RuntimeError) -> bool:
+    message = str(error).lower()
+    return "cuda" in message and "out of memory" in message
+
+
+def iter_retry_batch_sizes(batch_size: int) -> list[int]:
+    sizes: list[int] = []
+    current = max(1, batch_size)
+    while current not in sizes:
+        sizes.append(current)
+        if current == 1:
+            break
+        current = max(1, current // 2)
+    return sizes
+
+
+def transcribe_with_backoff(
+    whisper_model: object,
+    audio: object,
+    batch_size: int,
+    source_language: str | None,
+    device: str,
+) -> dict:
+    attempts = iter_retry_batch_sizes(batch_size)
+    last_error: RuntimeError | None = None
+    for attempt_batch_size in attempts:
+        try:
+            return whisper_model.transcribe(
+                audio,
+                batch_size=attempt_batch_size,
+                language=source_language,
+            )
+        except RuntimeError as error:
+            if device != "cuda" or not is_cuda_oom(error):
+                raise
+            last_error = error
+            release_memory()
+    assert last_error is not None
+    raise RuntimeError(
+        "CUDA ran out of memory during transcription even after retrying with "
+        f"smaller batch sizes {attempts}. Retry with --device cpu, a smaller "
+        "--model, or a lower --batch-size."
+    ) from last_error
+
+
 def transcribe_to_srt(
     input_file: Path,
     model_name: str = DEFAULT_MODEL,
@@ -109,6 +154,7 @@ def transcribe_to_srt(
     output_file: Path | None = None,
     write_output: bool = True,
     source_language: str | None = None,
+    device_preference: str = "auto",
 ) -> SubtitleDocument:
     input_file = input_file.expanduser().resolve()
     if not input_file.is_file():
@@ -120,7 +166,7 @@ def transcribe_to_srt(
         else None
     )
 
-    device, compute_type = get_whisperx_runtime()
+    device, compute_type = get_whisperx_runtime(device_preference)
     whisper_model = None
     align_model = None
     audio = None
@@ -135,10 +181,12 @@ def transcribe_to_srt(
         )
 
         audio = whisperx.load_audio(str(input_file))
-        transcription = whisper_model.transcribe(
-            audio,
+        transcription = transcribe_with_backoff(
+            whisper_model=whisper_model,
+            audio=audio,
             batch_size=batch_size,
-            language=normalized_source_language,
+            source_language=normalized_source_language,
+            device=device,
         )
         language = transcription["language"]
 
