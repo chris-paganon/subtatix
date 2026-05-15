@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from pathlib import Path
+from typing import Callable
 
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
@@ -10,6 +12,7 @@ from subgenx.subtitles import SubtitleCue, SubtitleDocument, write_srt
 
 
 DEFAULT_TRANSLATION_MODEL = "facebook/nllb-200-1.3B"
+DEFAULT_TRANSLATION_BATCH_SIZE = 16
 
 
 @dataclass(frozen=True)
@@ -114,16 +117,18 @@ def translate_subtitles(
     document: SubtitleDocument,
     target_language: str,
     model_name: str = DEFAULT_TRANSLATION_MODEL,
-    batch_size: int = 16,
+    batch_size: int = DEFAULT_TRANSLATION_BATCH_SIZE,
     max_length: int = 400,
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> Path:
     source = resolve_language(document.source_language)
     target = resolve_language(target_language)
     output_path = resolve_translation_output_path(document.subtitle_path, target)
     cues = document.cues
+    total_batches = max(1, math.ceil(len(cues) / batch_size))
 
     translated_texts: list[str] = []
-    for start in range(0, len(cues), batch_size):
+    for batch_index, start in enumerate(range(0, len(cues), batch_size), start=1):
         batch = cues[start : start + batch_size]
         translated_texts.extend(
             translate_batch(
@@ -134,6 +139,8 @@ def translate_subtitles(
                 max_length=max_length,
             )
         )
+        if progress_callback is not None:
+            progress_callback(batch_index, total_batches)
 
     translated_cues = [
         SubtitleCue(start=cue.start, end=cue.end, text=text)

@@ -126,6 +126,8 @@ def transcribe_with_backoff(
     source_language: str | None,
     device: str,
     log: Callable[[str], None] | None = None,
+    progress_callback: Callable[[float], None] | None = None,
+    progress_reset: Callable[[], None] | None = None,
 ) -> tuple[dict, int]:
     attempts = iter_retry_batch_sizes(batch_size)
     last_error: RuntimeError | None = None
@@ -135,6 +137,7 @@ def transcribe_with_backoff(
                 audio,
                 batch_size=attempt_batch_size,
                 language=source_language,
+                progress_callback=progress_callback,
             )
             return transcription, attempt_batch_size
         except RuntimeError as error:
@@ -148,6 +151,8 @@ def transcribe_with_backoff(
                     f"{attempt_batch_size}; retrying with batch size "
                     f"{attempts[next_attempt_index]}."
                 )
+            if progress_reset is not None and next_attempt_index < len(attempts):
+                progress_reset()
             release_memory()
     assert last_error is not None
     raise RuntimeError(
@@ -166,6 +171,8 @@ def transcribe_to_srt(
     source_language: str | None = None,
     device_preference: str = "auto",
     log: Callable[[str], None] | None = None,
+    progress_callback: Callable[[float], None] | None = None,
+    progress_reset: Callable[[], None] | None = None,
 ) -> SubtitleDocument:
     input_file = input_file.expanduser().resolve()
     if not input_file.is_file():
@@ -204,6 +211,8 @@ def transcribe_to_srt(
             source_language=normalized_source_language,
             device=device,
             log=log,
+            progress_callback=progress_callback,
+            progress_reset=progress_reset,
         )
         if log is not None:
             log(f"Transcription running with batch size {effective_batch_size}.")

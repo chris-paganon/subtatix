@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -12,6 +13,7 @@ from subgenx.subtitles import (
     transcribe_to_srt,
 )
 from subgenx.translation import (
+    DEFAULT_TRANSLATION_BATCH_SIZE,
     SUPPORTED_TARGET_LANGUAGE_CODES,
     get_available_nllb_languages,
     translate_subtitles,
@@ -27,6 +29,45 @@ app = typer.Typer(
         "and raw NLLB codes."
     ),
 )
+
+
+class ProgressBar:
+    def __init__(self, label: str, total: int, width: int = 28) -> None:
+        self._label = label
+        self._total = max(1, total)
+        self._width = width
+        self._current = 0
+
+    def __enter__(self) -> "ProgressBar":
+        self._render()
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        if exc_type is None and self._current < self._total:
+            self._current = self._total
+            self._render()
+        sys.stderr.write("\n")
+        sys.stderr.flush()
+
+    def update_to(self, value: int) -> None:
+        bounded = min(self._total, max(0, value))
+        if bounded != self._current:
+            self._current = bounded
+            self._render()
+
+    def reset(self) -> None:
+        if self._current != 0:
+            self._current = 0
+            self._render()
+
+    def _render(self) -> None:
+        filled = round((self._current / self._total) * self._width)
+        empty = self._width - filled
+        percent = round((self._current / self._total) * 100)
+        sys.stderr.write(
+            f"\r{self._label} [{'#' * filled}{'.' * empty}] {percent:>3}%"
+        )
+        sys.stderr.flush()
 
 
 @app.command()
@@ -159,24 +200,38 @@ def run(
 
     require_ffmpeg()
     write_original_srt = target_language is None or save_intermediary_srt
-    document = transcribe_to_srt(
-        input_file=input_file,
-        model_name=model,
-        batch_size=batch_size,
-        output_file=output,
-        write_output=write_original_srt,
-        source_language=source_language,
-        device_preference=device,
-        log=lambda message: typer.echo(message, err=True),
-    )
+    with ProgressBar("Transcription", 100) as transcription_progress:
+        document = transcribe_to_srt(
+            input_file=input_file,
+            model_name=model,
+            batch_size=batch_size,
+            output_file=output,
+            write_output=write_original_srt,
+            source_language=source_language,
+            device_preference=device,
+            log=lambda message: typer.echo(message, err=True),
+            progress_callback=lambda percent: transcription_progress.update_to(
+                round(percent)
+            ),
+            progress_reset=transcription_progress.reset,
+        )
     if write_original_srt:
         typer.echo(document.subtitle_path)
 
     if target_language:
-        translated_path = translate_subtitles(
-            document=document,
-            target_language=target_language,
+        total_batches = max(
+            1,
+            (len(document.cues) + DEFAULT_TRANSLATION_BATCH_SIZE - 1)
+            // DEFAULT_TRANSLATION_BATCH_SIZE,
         )
+        with ProgressBar("Translation", total_batches) as translation_progress:
+            translated_path = translate_subtitles(
+                document=document,
+                target_language=target_language,
+                progress_callback=lambda batch_index, total: translation_progress.update_to(
+                    batch_index
+                ),
+            )
         typer.echo(translated_path)
 
 
