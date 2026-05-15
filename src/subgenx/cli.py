@@ -25,7 +25,8 @@ app = typer.Typer(
     help=(
         "Transcribe an audio or video file to SRT with WhisperX. "
         "Without --to, the tool only transcribes. Passing --to also translates the "
-        "subtitles; add --save-intermediary-srt to keep the original transcribed SRT. "
+        "subtitles and keeps the original transcribed SRT unless "
+        "--discard-transcription is used. "
         "Use the language listing flags to inspect supported source, mapped target, "
         "and raw NLLB codes."
     ),
@@ -145,13 +146,13 @@ def run(
             ),
         ),
     ] = None,
-    save_intermediary_srt: Annotated[
+    discard_transcription: Annotated[
         bool,
         typer.Option(
-            "--save-intermediary-srt",
+            "--discard-transcription",
             help=(
-                "When used with --to, also save the original untranslated SRT file. "
-                "Without --to, the transcribed SRT is already written."
+                "When used with --to, do not save the original untranslated SRT file. "
+                "Without --to, the transcribed SRT is still written."
             ),
             is_flag=True,
         ),
@@ -216,7 +217,7 @@ def run(
 
     configure_runtime_noise()
     require_ffmpeg()
-    write_original_srt = target_language is None or save_intermediary_srt
+    write_original_srt = target_language is None or not discard_transcription
     with ProgressBar("Transcription", 100) as transcription_progress:
         document = transcribe_to_srt(
             input_file=input_file,

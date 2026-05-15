@@ -45,6 +45,8 @@ Translate after transcription:
 uv run subgenx input.mp4 --to es
 ```
 
+This writes both the original transcription SRT and the translated SRT by default.
+
 If CUDA runs out of memory on larger files, reduce the batch size or force CPU mode:
 
 ```bash
@@ -52,10 +54,10 @@ uv run subgenx input.mp4 --batch-size 4
 uv run subgenx input.mp4 --device cpu
 ```
 
-Keep both the original and translated subtitle files:
+To discard the original transcription and only keep the translated output:
 
 ```bash
-uv run subgenx input.mp4 --to es --save-intermediary-srt
+uv run subgenx input.mp4 --to es --discard-transcription
 ```
 
 List supported language codes:
