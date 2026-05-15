@@ -22,6 +22,7 @@ from subgenx.translation import (
 
 app = typer.Typer(
     add_completion=False,
+    context_settings={"help_option_names": ["-h", "--help"]},
     help=(
         "Transcribe an audio or video file to SRT with WhisperX. "
         "Without --to, the tool only transcribes. Passing --to also translates the "
@@ -94,27 +95,19 @@ def run(
         Path | None,
         typer.Argument(help="Path to the input audio or video file."),
     ] = None,
-    model: Annotated[
-        str,
-        typer.Option(help=f"Whisper model name to use. Default: {DEFAULT_MODEL}."),
-    ] = DEFAULT_MODEL,
-    batch_size: Annotated[
-        int,
+    target_language: Annotated[
+        str | None,
         typer.Option(
-            "--batch-size",
-            help="Batch size for Whisper inference. Reduce this if you run out of GPU memory.",
-        ),
-    ] = 8,
-    device: Annotated[
-        str,
-        typer.Option(
-            "--device",
+            "--to",
+            "--target-language",
+            "-t",
             help=(
-                "Execution device for WhisperX: 'auto', 'cuda', or 'cpu'. "
-                "Default: auto."
+                "Translate to this language. Use one of the mapped Whisper target "
+                "codes or a raw NLLB code like 'spa_Latn'. If omitted, the tool only "
+                "transcribes. Use --list-target-languages to inspect supported values."
             ),
         ),
-    ] = "auto",
+    ] = None,
     source_language: Annotated[
         str | None,
         typer.Option(
@@ -138,19 +131,27 @@ def run(
             ),
         ),
     ] = None,
-    target_language: Annotated[
-        str | None,
+    model: Annotated[
+        str,
+        typer.Option(help=f"Whisper model name to use. Default: {DEFAULT_MODEL}."),
+    ] = DEFAULT_MODEL,
+    batch_size: Annotated[
+        int,
         typer.Option(
-            "--to",
-            "--target-language",
-            "-t",
+            "--batch-size",
+            help="Batch size for Whisper inference. Reduce this if you run out of GPU memory.",
+        ),
+    ] = 8,
+    device: Annotated[
+        str,
+        typer.Option(
+            "--device",
             help=(
-                "Translate to this language. Use one of the mapped Whisper target "
-                "codes or a raw NLLB code like 'spa_Latn'. If omitted, the tool only "
-                "transcribes. Use --list-target-languages to inspect supported values."
+                "Execution device for WhisperX: 'auto', 'cuda', or 'cpu'. "
+                "Default: auto."
             ),
         ),
-    ] = None,
+    ] = "auto",
     discard_transcription: Annotated[
         bool,
         typer.Option(
