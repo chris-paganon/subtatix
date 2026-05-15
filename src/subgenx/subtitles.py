@@ -132,6 +132,8 @@ def transcribe_with_backoff(
     attempts = iter_retry_batch_sizes(batch_size)
     last_error: RuntimeError | None = None
     for attempt_batch_size in attempts:
+        if log is not None:
+            log(f"Starting transcription with batch size {attempt_batch_size}.")
         try:
             transcription = whisper_model.transcribe(
                 audio,
@@ -201,10 +203,11 @@ def transcribe_to_srt(
             model_name,
             device,
             compute_type=compute_type,
+            language=normalized_source_language,
         )
 
         audio = whisperx.load_audio(str(input_file))
-        transcription, effective_batch_size = transcribe_with_backoff(
+        transcription, _ = transcribe_with_backoff(
             whisper_model=whisper_model,
             audio=audio,
             batch_size=batch_size,
@@ -214,9 +217,9 @@ def transcribe_to_srt(
             progress_callback=progress_callback,
             progress_reset=progress_reset,
         )
-        if log is not None:
-            log(f"Transcription running with batch size {effective_batch_size}.")
         language = transcription["language"]
+        if normalized_source_language is None and log is not None:
+            log(f"Auto-detected source language: {language}.")
 
         align_model, align_metadata = whisperx.load_align_model(
             language_code=language,

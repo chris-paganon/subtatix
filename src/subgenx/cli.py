@@ -12,6 +12,7 @@ from subgenx.subtitles import (
     require_ffmpeg,
     transcribe_to_srt,
 )
+from subgenx.runtime import configure_runtime_noise
 from subgenx.translation import (
     DEFAULT_TRANSLATION_BATCH_SIZE,
     SUPPORTED_TARGET_LANGUAGE_CODES,
@@ -37,17 +38,18 @@ class ProgressBar:
         self._total = max(1, total)
         self._width = width
         self._current = 0
+        self._visible = False
 
     def __enter__(self) -> "ProgressBar":
-        self._render()
         return self
 
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
         if exc_type is None and self._current < self._total:
             self._current = self._total
             self._render()
-        sys.stderr.write("\n")
-        sys.stderr.flush()
+        if self._visible:
+            sys.stderr.write("\n")
+            sys.stderr.flush()
 
     def update_to(self, value: int) -> None:
         bounded = min(self._total, max(0, value))
@@ -57,16 +59,30 @@ class ProgressBar:
 
     def reset(self) -> None:
         if self._current != 0:
+            self._clear_line()
             self._current = 0
+            self._visible = False
+
+    def write_message(self, message: str) -> None:
+        if self._visible:
+            sys.stderr.write("\n")
+        sys.stderr.write(f"{message}\n")
+        sys.stderr.flush()
+        if self._visible and self._current < self._total:
             self._render()
 
     def _render(self) -> None:
         filled = round((self._current / self._total) * self._width)
         empty = self._width - filled
         percent = round((self._current / self._total) * 100)
+        self._visible = True
         sys.stderr.write(
             f"\r{self._label} [{'#' * filled}{'.' * empty}] {percent:>3}%"
         )
+        sys.stderr.flush()
+
+    def _clear_line(self) -> None:
+        sys.stderr.write("\r" + (" " * (self._width + len(self._label) + 10)) + "\r")
         sys.stderr.flush()
 
 
@@ -198,6 +214,7 @@ def run(
     if input_file is None:
         raise typer.BadParameter("Missing argument 'INPUT_FILE'.")
 
+    configure_runtime_noise()
     require_ffmpeg()
     write_original_srt = target_language is None or save_intermediary_srt
     with ProgressBar("Transcription", 100) as transcription_progress:
@@ -209,7 +226,7 @@ def run(
             write_output=write_original_srt,
             source_language=source_language,
             device_preference=device,
-            log=lambda message: typer.echo(message, err=True),
+            log=transcription_progress.write_message,
             progress_callback=lambda percent: transcription_progress.update_to(
                 round(percent)
             ),
