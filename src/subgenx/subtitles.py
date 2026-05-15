@@ -5,7 +5,6 @@ import shutil
 from pathlib import Path
 
 import whisperx
-from whisperx.utils import get_writer
 
 from subgenx.runtime import get_whisperx_runtime, release_memory
 
@@ -14,9 +13,17 @@ DEFAULT_MODEL = "large-v2"
 
 
 @dataclass(frozen=True)
-class SubtitleGenerationResult:
+class SubtitleCue:
+    start: float
+    end: float
+    text: str
+
+
+@dataclass(frozen=True)
+class SubtitleDocument:
     source_language: str
     subtitle_path: Path
+    cues: list[SubtitleCue]
 
 
 def require_ffmpeg() -> None:
@@ -39,17 +46,60 @@ def resolve_output_path(input_file: Path, output_file: Path | None) -> Path:
     return output_file.with_suffix(".srt").resolve()
 
 
+def format_srt_timestamp(seconds: float) -> str:
+    total_milliseconds = max(0, round(seconds * 1000))
+    hours, remainder = divmod(total_milliseconds, 3_600_000)
+    minutes, remainder = divmod(remainder, 60_000)
+    secs, milliseconds = divmod(remainder, 1000)
+    return f"{hours:02}:{minutes:02}:{secs:02},{milliseconds:03}"
+
+
+def build_cues(aligned_transcription: dict) -> list[SubtitleCue]:
+    cues: list[SubtitleCue] = []
+    for segment in aligned_transcription["segments"]:
+        text = segment["text"].strip()
+        if not text:
+            continue
+        cues.append(
+            SubtitleCue(
+                start=float(segment["start"]),
+                end=float(segment["end"]),
+                text=text,
+            )
+        )
+    return cues
+
+
+def write_srt(subtitle_path: Path, cues: list[SubtitleCue]) -> None:
+    subtitle_path.parent.mkdir(parents=True, exist_ok=True)
+    blocks = []
+    for index, cue in enumerate(cues, start=1):
+        blocks.append(
+            "\n".join(
+                [
+                    str(index),
+                    (
+                        f"{format_srt_timestamp(cue.start)} --> "
+                        f"{format_srt_timestamp(cue.end)}"
+                    ),
+                    cue.text,
+                ]
+            )
+        )
+    subtitle_path.write_text("\n\n".join(blocks) + "\n", encoding="utf-8")
+
+
 def transcribe_to_srt(
     input_file: Path,
     model_name: str = DEFAULT_MODEL,
     batch_size: int = 16,
     output_file: Path | None = None,
-) -> SubtitleGenerationResult:
+    write_output: bool = True,
+) -> SubtitleDocument:
     input_file = input_file.expanduser().resolve()
     if not input_file.is_file():
         raise FileNotFoundError(f"Input file not found: {input_file}")
     output_path = resolve_output_path(input_file, output_file)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     device, compute_type = get_whisperx_runtime()
     whisper_model = None
@@ -82,23 +132,13 @@ def transcribe_to_srt(
             return_char_alignments=False,
         )
         aligned_transcription["language"] = language
-
-        temporary_output_path = input_file.with_suffix(".srt")
-        writer = get_writer("srt", str(input_file.parent))
-        writer(
-            aligned_transcription,
-            str(input_file),
-            {
-                "highlight_words": False,
-                "max_line_count": None,
-                "max_line_width": None,
-            },
-        )
-        if temporary_output_path != output_path:
-            temporary_output_path.replace(output_path)
-        return SubtitleGenerationResult(
+        cues = build_cues(aligned_transcription)
+        if write_output:
+            write_srt(output_path, cues)
+        return SubtitleDocument(
             source_language=language,
             subtitle_path=output_path,
+            cues=cues,
         )
     finally:
         del whisper_model

@@ -39,24 +39,31 @@ def build_parser() -> argparse.ArgumentParser:
         "--target-language",
         help="Target language for a translated subtitle file, for example 'spanish' or 'es'.",
     )
+    parser.add_argument(
+        "--save-intermediary-srt",
+        action="store_true",
+        help="When translating, also save the original untranslated SRT file.",
+    )
     return parser
 
 
 def main() -> None:
     require_ffmpeg()
     args = build_parser().parse_args()
-    result = transcribe_to_srt(
+    write_original_srt = args.target_language is None or args.save_intermediary_srt
+    document = transcribe_to_srt(
         input_file=args.input_file,
         model_name=args.model,
         batch_size=args.batch_size,
         output_file=args.output,
+        write_output=write_original_srt,
     )
-    print(result.subtitle_path)
+    if write_original_srt:
+        print(document.subtitle_path)
 
     if args.target_language:
         translated_path = translate_subtitles(
-            subtitle_path=result.subtitle_path,
-            source_language=result.source_language,
+            document=document,
             target_language=args.target_language,
         )
         print(translated_path)

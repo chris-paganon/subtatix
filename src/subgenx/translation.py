@@ -7,6 +7,7 @@ from pathlib import Path
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 from subgenx.runtime import get_device, release_memory
+from subgenx.subtitles import SubtitleCue, SubtitleDocument, write_srt
 
 
 DEFAULT_TRANSLATION_MODEL = "facebook/nllb-200-1.3B"
@@ -16,13 +17,6 @@ DEFAULT_TRANSLATION_MODEL = "facebook/nllb-200-1.3B"
 class LanguageSpec:
     nllb_code: str
     suffix: str
-
-
-@dataclass(frozen=True)
-class SubtitleCue:
-    index: str
-    timing: str
-    text: str
 
 
 LANGUAGE_SPECS = {
@@ -80,31 +74,6 @@ def resolve_translation_output_path(
     )
 
 
-def parse_srt(subtitle_path: Path) -> list[SubtitleCue]:
-    content = subtitle_path.read_text(encoding="utf-8").strip()
-    if not content:
-        return []
-
-    cues: list[SubtitleCue] = []
-    for block in re.split(r"\n\s*\n", content):
-        lines = block.splitlines()
-        if len(lines) < 3:
-            raise ValueError(f"Malformed SRT block in {subtitle_path}: {block!r}")
-        cues.append(
-            SubtitleCue(
-                index=lines[0],
-                timing=lines[1],
-                text="\n".join(lines[2:]),
-            )
-        )
-    return cues
-
-
-def write_srt(subtitle_path: Path, cues: list[SubtitleCue]) -> None:
-    blocks = [f"{cue.index}\n{cue.timing}\n{cue.text}" for cue in cues]
-    subtitle_path.write_text("\n\n".join(blocks) + "\n", encoding="utf-8")
-
-
 def get_translation_backend(
     model_name: str = DEFAULT_TRANSLATION_MODEL,
 ) -> tuple[object, object, str]:
@@ -141,21 +110,16 @@ def translate_batch(
 
 
 def translate_subtitles(
-    subtitle_path: Path,
-    source_language: str,
+    document: SubtitleDocument,
     target_language: str,
     model_name: str = DEFAULT_TRANSLATION_MODEL,
     batch_size: int = 16,
     max_length: int = 400,
 ) -> Path:
-    subtitle_path = subtitle_path.expanduser().resolve()
-    if not subtitle_path.is_file():
-        raise FileNotFoundError(f"Subtitle file not found: {subtitle_path}")
-
-    source = resolve_language(source_language)
+    source = resolve_language(document.source_language)
     target = resolve_language(target_language)
-    output_path = resolve_translation_output_path(subtitle_path, target)
-    cues = parse_srt(subtitle_path)
+    output_path = resolve_translation_output_path(document.subtitle_path, target)
+    cues = document.cues
 
     translated_texts: list[str] = []
     for start in range(0, len(cues), batch_size):
@@ -171,7 +135,7 @@ def translate_subtitles(
         )
 
     translated_cues = [
-        SubtitleCue(index=cue.index, timing=cue.timing, text=text)
+        SubtitleCue(start=cue.start, end=cue.end, text=text)
         for cue, text in zip(cues, translated_texts, strict=True)
     ]
     write_srt(output_path, translated_cues)
