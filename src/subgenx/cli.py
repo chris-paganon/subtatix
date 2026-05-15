@@ -4,12 +4,13 @@ import argparse
 from pathlib import Path
 
 from subgenx.subtitles import DEFAULT_MODEL, require_ffmpeg, transcribe_to_srt
+from subgenx.translation import translate_subtitles
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="subgenx",
-        description="Transcribe an audio or video file to SRT with WhisperX.",
+        description="Transcribe an audio or video file to SRT with WhisperX and optionally translate it.",
     )
     parser.add_argument(
         "input_file",
@@ -33,16 +34,29 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Output SRT path. If a directory is provided, the default SRT filename is used inside it.",
     )
+    parser.add_argument(
+        "-t",
+        "--target-language",
+        help="Target language for a translated subtitle file, for example 'spanish' or 'es'.",
+    )
     return parser
 
 
 def main() -> None:
     require_ffmpeg()
     args = build_parser().parse_args()
-    output_path = transcribe_to_srt(
+    result = transcribe_to_srt(
         input_file=args.input_file,
         model_name=args.model,
         batch_size=args.batch_size,
         output_file=args.output,
     )
-    print(output_path)
+    print(result.subtitle_path)
+
+    if args.target_language:
+        translated_path = translate_subtitles(
+            subtitle_path=result.subtitle_path,
+            source_language=result.source_language,
+            target_language=args.target_language,
+        )
+        print(translated_path)
