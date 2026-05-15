@@ -2338,11 +2338,17 @@ name = "subgenx"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "torch" },
+    { name = "transformers" },
     { name = "whisperx" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "whisperx", specifier = ">=3.8.5" }]
+requires-dist = [
+    { name = "torch", specifier = ">=2.8.0" },
+    { name = "transformers", specifier = ">=4.57.6" },
+    { name = "whisperx", specifier = ">=3.8.5" },
+]
 
 [[package]]
 name = "sympy"
