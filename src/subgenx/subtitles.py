@@ -150,7 +150,7 @@ def transcribe_with_backoff(
 def transcribe_to_srt(
     input_file: Path,
     model_name: str = DEFAULT_MODEL,
-    batch_size: int = 16,
+    batch_size: int = 8,
     output_file: Path | None = None,
     write_output: bool = True,
     source_language: str | None = None,

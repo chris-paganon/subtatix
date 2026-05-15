@@ -45,7 +45,7 @@ def run(
             "--batch-size",
             help="Batch size for Whisper inference. Reduce this if you run out of GPU memory.",
         ),
-    ] = 16,
+    ] = 8,
     device: Annotated[
         str,
         typer.Option(
