@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from click.exceptions import ClickException
+
+from subgenx.errors import SubgenxError
 
 from subgenx.subtitles import (
     DEFAULT_MODEL,
@@ -33,7 +36,6 @@ app = typer.Typer(
         "and raw NLLB codes."
     ),
 )
-
 
 class ProgressBar:
     def __init__(self, label: str, total: int, width: int = 28) -> None:
@@ -259,5 +261,13 @@ def run(
         typer.echo(translated_path)
 
 
-def main() -> None:
-    app()
+def main() -> int:
+    try:
+        app(standalone_mode=False)
+    except SubgenxError as error:
+        ClickException(str(error)).show()
+        return 1
+    except ClickException as error:
+        error.show()
+        return error.exit_code
+    return 0

@@ -6,18 +6,22 @@ import warnings
 
 import torch
 
+from subgenx.errors import SubgenxError
+
 
 def get_device(preferred: str = "auto") -> str:
     normalized = preferred.strip().lower()
     if normalized not in {"auto", "cpu", "cuda"}:
-        raise ValueError(
+        raise SubgenxError(
             f"Unsupported device '{preferred}'. Use 'auto', 'cpu', or 'cuda'."
         )
     if normalized == "cpu":
         return "cpu"
     if normalized == "cuda":
         if not torch.cuda.is_available():
-            raise RuntimeError("CUDA was requested but is not available on this system.")
+            raise SubgenxError(
+                "CUDA was requested but is not available on this system."
+            )
         return "cuda"
     if torch.cuda.is_available():
         return "cuda"
