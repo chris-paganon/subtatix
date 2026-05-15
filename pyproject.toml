@@ -7,7 +7,9 @@ authors = [
     { name = "Chris Paganon", email = "info@chrispaganon.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "whisperx>=3.8.5",
+]
 
 [project.scripts]
 subgenx = "subgenx:main"
