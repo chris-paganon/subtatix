@@ -74,8 +74,7 @@ def run(
             help=(
                 "Translate to this language. Use one of the mapped Whisper target "
                 "codes or a raw NLLB code like 'spa_Latn'. If omitted, the tool only "
-                "transcribes. Use --list-target-languages or --list-nllb-languages "
-                "to inspect supported values."
+                "transcribes. Use --list-target-languages to inspect supported values."
             ),
         ),
     ] = None,
@@ -94,7 +93,10 @@ def run(
         bool,
         typer.Option(
             "--list-languages",
-            help="List source Whisper codes, mapped target codes, and raw NLLB codes.",
+            help=(
+                "List source Whisper codes and the convenience target codes. "
+                "Use --list-target-languages for the full raw NLLB target list."
+            ),
             is_flag=True,
         ),
     ] = False,
@@ -110,20 +112,15 @@ def run(
         bool,
         typer.Option(
             "--list-target-languages",
-            help="List supported mapped target language codes for --to.",
-            is_flag=True,
-        ),
-    ] = False,
-    list_nllb_languages: Annotated[
-        bool,
-        typer.Option(
-            "--list-nllb-languages",
-            help="List raw NLLB target language codes accepted by --to.",
+            help=(
+                "List the convenience target codes for --to, followed by the full raw "
+                "NLLB target language codes accepted by --to."
+            ),
             is_flag=True,
         ),
     ] = False,
 ) -> None:
-    if list_languages or list_source_languages or list_target_languages or list_nllb_languages:
+    if list_languages or list_source_languages or list_target_languages:
         if input_file is not None:
             raise typer.BadParameter(
                 "INPUT_FILE cannot be used with language listing options."
@@ -133,10 +130,16 @@ def run(
             typer.echo(", ".join(SUPPORTED_SOURCE_LANGUAGE_CODES))
             typer.echo()
         if list_languages or list_target_languages:
-            typer.echo("Mapped target languages (--to Whisper-style codes):")
+            typer.echo(
+                "Convenience target languages (--to Whisper-style codes mapped to NLLB):"
+            )
             typer.echo(", ".join(SUPPORTED_TARGET_LANGUAGE_CODES))
             typer.echo()
-        if list_languages or list_nllb_languages:
+        if list_languages:
+            typer.echo(
+                "Use --list-target-languages to also show the full raw NLLB target list."
+            )
+        if list_target_languages:
             typer.echo("Raw NLLB target languages (--to NLLB codes):")
             typer.echo(", ".join(get_available_nllb_languages()))
         return
