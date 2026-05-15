@@ -1,8 +1,9 @@
 [project]
 name = "subgenx"
 version = "0.1.0"
-description = "Add your description here"
+description = "CLI for generating and translating SRT subtitles with WhisperX"
 readme = "README.md"
+license = "BSD-2-Clause"
 authors = [
     { name = "Chris Paganon", email = "info@chrispaganon.com" }
 ]
