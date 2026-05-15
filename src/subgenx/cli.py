@@ -26,7 +26,8 @@ app = typer.Typer(
         "Transcribe an audio or video file to SRT with WhisperX. "
         "Without --to, the tool only transcribes. Passing --to also translates the "
         "subtitles and keeps the original transcribed SRT unless "
-        "--discard-transcription is used. "
+        "--discard-transcription is used. Output names are generated as "
+        "'.srt' and translated variants like '.es.srt'. "
         "Use the language listing flags to inspect supported source, mapped target, "
         "and raw NLLB codes."
     ),
@@ -130,7 +131,11 @@ def run(
         typer.Option(
             "--output",
             "-o",
-            help="Output SRT path. If a directory is provided, the default SRT filename is used inside it.",
+            help=(
+                "Base output path without a .srt suffix. subgenx writes "
+                "'.srt' and translated variants like '.es.srt'. If a directory is "
+                "provided, the default filename based on the input file is used inside it."
+            ),
         ),
     ] = None,
     target_language: Annotated[

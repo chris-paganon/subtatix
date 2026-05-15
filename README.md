@@ -30,8 +30,10 @@ uv run subgenx input.mp4
 Transcribe to a specific output path:
 
 ```bash
-uv run subgenx input.mp4 --output subtitles.srt
+uv run subgenx input.mp4 --output some-path/some-file-name
 ```
+
+`--output` is a base path, not a full `.srt` filename. This writes `some-path/some-file-name.srt`. If you also translate to Spanish, it writes `some-path/some-file-name.es.srt`.
 
 Set the source language explicitly:
 
@@ -59,6 +61,8 @@ To discard the original transcription and only keep the translated output:
 ```bash
 uv run subgenx input.mp4 --to es --discard-transcription
 ```
+
+Passing an `--output` value that ends in `.srt` is rejected. Use a base path such as `--output subtitles` instead.
 
 List supported language codes:
 

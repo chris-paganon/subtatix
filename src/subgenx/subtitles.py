@@ -55,8 +55,12 @@ def resolve_output_path(input_file: Path, output_file: Path | None) -> Path:
     output_file = output_file.expanduser()
     if output_file.exists() and output_file.is_dir():
         return (output_file / default_output_path.name).resolve()
-    if output_file.suffix:
-        return output_file.resolve()
+    if output_file.suffix == ".srt":
+        raise ValueError(
+            "Output paths must not end in '.srt'. Pass a base output path like "
+            "'some-path/some-file-name' so subgenx can write '.srt' and translated variants like "
+            "'.es.srt'."
+        )
     return output_file.with_suffix(".srt").resolve()
 
 
