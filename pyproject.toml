@@ -8,6 +8,20 @@ authors = [
     { name = "Chris Paganon", email = "info@chrispaganon.com" }
 ]
 requires-python = ">=3.12"
+keywords = ["cli", "subtitles", "srt", "whisperx", "transcription", "translation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Text Processing",
+    "Topic :: Utilities",
+]
 dependencies = [
     "accelerate>=1.13.0",
     "sentencepiece>=0.2.1",
@@ -16,6 +30,11 @@ dependencies = [
     "typer>=0.25.1",
     "whisperx>=3.8.5",
 ]
+
+[project.urls]
+Homepage = "https://github.com/chris-paganon/subtatix"
+Repository = "https://github.com/chris-paganon/subtatix"
+Issues = "https://github.com/chris-paganon/subtatix/issues"
 
 [project.scripts]
 subtatix = "subtatix.__main__:main"

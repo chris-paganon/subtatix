@@ -7,30 +7,45 @@ It transcribes the input, aligns subtitle timings with WhisperX, and can then tr
 ## Requirements
 
 - Python 3.12+
-- `ffmpeg` available on your `PATH`
+- `ffmpeg` installed separately and available on your `PATH`
 - Enough disk space for model downloads and caching
-- Internet access on first run to download the required models
 
 The first run will be slower because WhisperX and translation models need to be downloaded. Subsequent runs reuse the cached models and do not need to download them again unless the cache is cleared.
 
-## Usage
+`ffmpeg` is an external system dependency. It is not installed by `pip`, `uvx`, or `uv tool install`.
 
-Install project dependencies:
+## Installation
+
+Run without installing:
 
 ```bash
-uv sync
+uvx subtatix --help
 ```
+
+Install as a tool with `uv`:
+
+```bash
+uv tool install subtatix
+```
+
+Install with `pip`:
+
+```bash
+pip install subtatix
+```
+
+## Usage
 
 Run the CLI:
 
 ```bash
-uv run subtatix input.mp4
+subtatix input.mp4
 ```
 
 Transcribe to a specific output path:
 
 ```bash
-uv run subtatix input.mp4 --output some-path/some-file-name
+subtatix input.mp4 --output some-path/some-file-name
 ```
 
 `--output` is a base path, not a full `.srt` filename. This writes `some-path/some-file-name.srt`. If you also translate to Spanish, it writes `some-path/some-file-name.es.srt`.
@@ -38,13 +53,13 @@ uv run subtatix input.mp4 --output some-path/some-file-name
 Set the source language explicitly:
 
 ```bash
-uv run subtatix input.mp4 --source-language en
+subtatix input.mp4 --source-language en
 ```
 
 Translate after transcription:
 
 ```bash
-uv run subtatix input.mp4 --to es
+subtatix input.mp4 --to es
 ```
 
 This writes both the original transcription SRT and the translated SRT by default.
@@ -52,14 +67,14 @@ This writes both the original transcription SRT and the translated SRT by defaul
 If CUDA runs out of memory on larger files, reduce the batch size or force CPU mode:
 
 ```bash
-uv run subtatix input.mp4 --batch-size 4
-uv run subtatix input.mp4 --device cpu
+subtatix input.mp4 --batch-size 4
+subtatix input.mp4 --device cpu
 ```
 
 To discard the original transcription and only keep the translated output:
 
 ```bash
-uv run subtatix input.mp4 --to es --discard-transcription
+subtatix input.mp4 --to es --discard-transcription
 ```
 
 Passing an `--output` value that ends in `.srt` is rejected. Use a base path such as `--output subtitles` instead.
@@ -67,8 +82,8 @@ Passing an `--output` value that ends in `.srt` is rejected. Use a base path suc
 List supported language codes:
 
 ```bash
-uv run subtatix --list-languages
-uv run subtatix --list-target-languages
+subtatix --list-languages
+subtatix --list-target-languages
 ```
 
 ## Models
